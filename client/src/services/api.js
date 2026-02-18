@@ -30,6 +30,57 @@ api.interceptors.response.use(
   }
 )
 
+// Auth API
+export const authApi = {
+  login: (credentials) => api.post('/auth/login', credentials),
+  register: (userData) => api.post('/auth/register', userData),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
+  refreshToken: () => api.post('/auth/refresh'),
+  me: () => api.get('/auth/me'),
+  changePassword: (passwords) => api.post('/auth/change-password', passwords)
+}
+
+// Time Cards API
+export const timeCardApi = {
+  getCurrent: () => api.get('/timecards/current'),
+  getAll: (params) => api.get('/timecards', { params }),
+  getById: (id) => api.get(`/timecards/${id}`),
+  submit: (id) => api.post(`/timecards/${id}/submit`),
+  addEntry: (entry) => api.post('/timecards/entries', entry),
+  updateEntry: (entryId, entry) => api.put(`/timecards/entries/${entryId}`, entry),
+  getTeamPending: () => api.get('/timecards/team/pending'),
+  review: (id, review) => api.post(`/timecards/${id}/review`, review)
+}
+
+// Time Off API
+export const timeOffApi = {
+  getAll: (params) => api.get('/timeoff', { params }),
+  getById: (id) => api.get(`/timeoff/${id}`),
+  create: (request) => api.post('/timeoff', request),
+  cancel: (id) => api.delete(`/timeoff/${id}`),
+  getTeamRequests: () => api.get('/timeoff/team'),
+  approve: (id, comments) => api.post(`/timeoff/${id}/approve`, { comments }),
+  reject: (id, comments) => api.post(`/timeoff/${id}/reject`, { comments }),
+  getCalendar: (params) => api.get('/timeoff/calendar', { params })
+}
+
+// Calendar API
+export const calendarApi = {
+  getEvents: (params) => api.get('/calendar', { params }),
+  createEvent: (event) => api.post('/calendar', event),
+  updateEvent: (id, event) => api.put(`/calendar/${id}`, event),
+  deleteEvent: (id) => api.delete(`/calendar/${id}`)
+}
+
+// Notifications API
+export const notificationApi = {
+  getAll: (params) => api.get('/notifications', { params }),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
+  delete: (id) => api.delete(`/notifications/${id}`)
+}
+
 // Admin API
 export const adminApi = {
   // User Management
@@ -49,6 +100,19 @@ export const adminApi = {
   
   // System Stats
   getStats: () => api.get('/admin/stats')
+}
+
+// Profile API
+export const profileApi = {
+  get: () => api.get('/profile'),
+  update: (profileData) => api.put('/profile', profileData),
+  uploadAvatar: (file) => {
+    const formData = new FormData()
+    formData.append('avatar', file)
+    return api.post('/profile/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  }
 }
 
 export default api
