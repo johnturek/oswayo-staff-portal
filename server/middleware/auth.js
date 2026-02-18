@@ -3,12 +3,20 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
+// In-memory token blacklist (for production, use Redis or database)
+const blacklistedTokens = new Set();
+
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
     return res.status(401).json({ error: 'Access token required' });
+  }
+
+  // Check if token is blacklisted
+  if (blacklistedTokens.has(token)) {
+    return res.status(401).json({ error: 'Token has been revoked' });
   }
 
   try {
@@ -36,6 +44,7 @@ const authenticateToken = async (req, res, next) => {
     }
 
     req.user = user;
+    req.token = token; // Store token for potential blacklisting
     next();
   } catch (error) {
     console.error('Token verification failed:', error.message);
@@ -105,10 +114,17 @@ const verifyRefreshToken = (token) => {
   }
 };
 
+const blacklistToken = (token) => {
+  blacklistedTokens.add(token);
+  // In production, you might want to clean up expired tokens periodically
+  // For now, keep it simple
+};
+
 module.exports = {
   authenticateToken,
   requireRole,
   requireManager,
   generateTokens,
-  verifyRefreshToken
+  verifyRefreshToken,
+  blacklistToken
 };

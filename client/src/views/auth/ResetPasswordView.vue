@@ -2,7 +2,16 @@
   <div class="space-y-4">
     <h2 class="text-xl font-semibold text-center">Reset Password</h2>
     
-    <form @submit.prevent="handleSubmit" class="space-y-4">
+    <!-- Success/Error Messages -->
+    <div v-if="message" class="p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+      {{ message }}
+    </div>
+    
+    <div v-if="error" class="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+      {{ error }}
+    </div>
+    
+    <form @submit.prevent="handleSubmit" class="space-y-4" v-if="!message">
       <div>
         <label for="password" class="block text-sm font-medium text-gray-700">New Password</label>
         <input
@@ -33,36 +42,68 @@
         {{ loading ? 'Updating...' : 'Update Password' }}
       </button>
     </form>
+    
+    <div class="text-center" v-if="message">
+      <p class="text-sm text-gray-600">Redirecting to login...</p>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { authApi } from '@/services/api'
 
 export default {
   name: 'ResetPasswordView',
   setup() {
+    const route = useRoute()
+    const router = useRouter()
     const password = ref('')
     const confirmPassword = ref('')
     const loading = ref(false)
+    const message = ref('')
+    const error = ref('')
+    const token = ref('')
 
-    const handleSubmit = () => {
+    onMounted(() => {
+      token.value = route.query.token
+      if (!token.value) {
+        error.value = 'Invalid reset link'
+      }
+    })
+
+    const handleSubmit = async () => {
       if (password.value !== confirmPassword.value) {
-        alert('Passwords do not match')
+        error.value = 'Passwords do not match'
         return
       }
       
       loading.value = true
-      setTimeout(() => {
-        alert('Password updated successfully!')
+      message.value = ''
+      error.value = ''
+      
+      try {
+        const response = await authApi.resetPassword(token.value, password.value)
+        message.value = response.data.message
+        
+        // Redirect to login after success
+        setTimeout(() => {
+          router.push('/auth/login')
+        }, 2000)
+      } catch (err) {
+        error.value = err.response?.data?.message || 'An error occurred. Please try again.'
+      } finally {
         loading.value = false
-      }, 1000)
+      }
     }
 
     return {
       password,
       confirmPassword,
       loading,
+      message,
+      error,
       handleSubmit
     }
   }
