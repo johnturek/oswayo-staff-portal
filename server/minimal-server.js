@@ -162,3 +162,4 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: POST http://localhost:${PORT}/api/auth/login`);
   console.log('📊 Environment:', process.env.NODE_ENV || 'development');
 });
+// Force rebuild Wed Feb 18 02:58:27 PM UTC 2026
