@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,10 +7,105 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                String   @id @default(cuid())
+  employeeId        String   @unique
+  firstName         String
+  lastName          String
+  email             String   @unique
+  password          String
+  role              Role     @default(STAFF)
+  department        String?
+  building          String?
+  hireDate          DateTime?
+  active            Boolean  @default(true)
+  phoneNumber       String?
+  emergencyContact  String?
+  emergencyPhone    String?
+  
+  // Manager relationships - staff can have multiple managers
+  managedUsers      User[]   @relation("ManagerToStaff")
+  managers          User[]   @relation("ManagerToStaff")
+  
+  // Principal relationship for faculty
+  principalId       String?
+  principal         User?    @relation("PrincipalToFaculty", fields: [principalId], references: [id])
+  faculty           User[]   @relation("PrincipalToFaculty")
+  
+  // Time tracking
+  timeCards         TimeCard[]
+  timeOffRequests   TimeOffRequest[]
+  
+  // Notifications
+  notifications     Notification[]
+  
+  // Audit fields
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Approved time off and time cards
+  approvedTimeOff   TimeOffRequest[] @relation("ApprovedBy")
+  approvedTimeCards TimeCard[] @relation("ApprovedBy")
+  
+  @@map("users")
+}
+
 enum Role {
-  STAFF
-  MANAGER
-  ADMIN
+  STAFF                // Submit timecards and time off
+  MANAGER             // Approve staff timecards and time off
+  FULL_TIME_FACULTY   // Submit time off only, no timecards
+  PRINCIPAL           // Approve faculty time off, view building data
+  DISTRICT_ADMIN      // Full system access
+}
+
+model TimeCard {
+  id            String   @id @default(cuid())
+  employeeId    String
+  employee      User     @relation(fields: [employeeId], references: [id])
+  
+  periodStart   DateTime
+  periodEnd     DateTime
+  status        TimeCardStatus @default(DRAFT)
+  totalHours    Float    @default(0)
+  
+  timeEntries   TimeEntry[]
+  
+  submittedAt   DateTime?
+  approvedAt    DateTime?
+  approvedBy    String?
+  approver      User?    @relation("ApprovedBy", fields: [approvedBy], references: [id])
+  comments      String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("time_cards")
+}
+
+enum TimeCardStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+model TimeEntry {
+  id          String   @id @default(cuid())
+  timeCardId  String
+  timeCard    TimeCard @relation(fields: [timeCardId], references: [id])
+  
+  date        DateTime
+  timeIn      DateTime?
+  timeOut     DateTime?
+  dayType     DayType  @default(REGULAR)
+  hours       Float    @default(0)
+  breakTime   Int      @default(0) // minutes
+  notes       String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("time_entries")
 }
 
 enum DayType {
@@ -29,159 +121,106 @@ enum DayType {
   UNPAID
 }
 
+model TimeOffRequest {
+  id            String   @id @default(cuid())
+  employeeId    String
+  employee      User     @relation(fields: [employeeId], references: [id])
+  
+  startDate     DateTime
+  endDate       DateTime
+  type          TimeOffType
+  reason        String?
+  isHalfDay     Boolean  @default(false)
+  halfDayPeriod String? // "AM" or "PM"
+  
+  status        TimeOffStatus @default(PENDING)
+  
+  approvedBy    String?
+  approver      User?    @relation("ApprovedBy", fields: [approvedBy], references: [id])
+  approvedAt    DateTime?
+  comments      String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("time_off_requests")
+}
+
 enum TimeOffType {
-  SICK
   VACATION
+  SICK
   PERSONAL
   BEREAVEMENT
   JURY_DUTY
+  MATERNITY
+  PATERNITY
   UNPAID
   PROFESSIONAL_DEVELOPMENT
+  CONFERENCE
 }
 
-enum RequestStatus {
+enum TimeOffStatus {
   PENDING
-  APPROVED
-  DENIED
-}
-
-enum TimeCardStatus {
-  DRAFT
-  SUBMITTED
   APPROVED
   REJECTED
 }
 
-model User {
-  id                String           @id @default(cuid())
-  email             String           @unique
-  firstName         String
-  lastName          String
-  employeeId        String           @unique
-  passwordHash      String
-  role              Role             @default(STAFF)
-  department        String?
-  position          String?
-  hireDate          DateTime?
-  isActive          Boolean          @default(true)
-  managerId         String?
-  manager           User?            @relation("ManagerEmployee", fields: [managerId], references: [id])
-  directReports     User[]           @relation("ManagerEmployee")
-  resetToken        String?
-  resetTokenExpiry  DateTime?
-  lastLogin         DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  // Relations
-  timeCards         TimeCard[]
-  timeOffRequests   TimeOffRequest[] @relation("RequestEmployee")
-  approvedRequests  TimeOffRequest[] @relation("ApprovalManager")
-  notifications     Notification[]
-  calendarEvents    CalendarEvent[]
-
-  @@map("users")
-}
-
 model CalendarEvent {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
   description String?
-  date        DateTime
-  dayType     DayType
-  isRecurring Boolean   @default(false)
-  recurrenceRule String?
-  createdById String
-  createdBy   User      @relation(fields: [createdById], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
+  startDate   DateTime
+  endDate     DateTime
+  type        EventType @default(HOLIDAY)
+  building    String?   // null = district-wide
+  
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
   @@map("calendar_events")
 }
 
-model TimeCard {
-  id          String          @id @default(cuid())
-  employeeId  String
-  employee    User            @relation(fields: [employeeId], references: [id])
-  periodStart DateTime
-  periodEnd   DateTime
-  status      TimeCardStatus  @default(DRAFT)
-  submittedAt DateTime?
-  approvedAt  DateTime?
-  approvedBy  String?
-  comments    String?
-  totalHours  Float           @default(0)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  // Relations
-  timeEntries TimeEntry[]
-
-  @@map("time_cards")
-}
-
-model TimeEntry {
-  id         String    @id @default(cuid())
-  timeCardId String
-  timeCard   TimeCard  @relation(fields: [timeCardId], references: [id], onDelete: Cascade)
-  date       DateTime
-  dayType    DayType   @default(REGULAR)
-  timeIn     DateTime?
-  timeOut    DateTime?
-  breakTime  Int       @default(0) // minutes
-  hours      Float     @default(0)
-  notes      String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  @@map("time_entries")
-}
-
-model TimeOffRequest {
-  id          String        @id @default(cuid())
-  employeeId  String
-  employee    User          @relation("RequestEmployee", fields: [employeeId], references: [id])
-  type        TimeOffType
-  startDate   DateTime
-  endDate     DateTime
-  hours       Float?
-  reason      String?
-  status      RequestStatus @default(PENDING)
-  submittedAt DateTime      @default(now())
-  reviewedAt  DateTime?
-  reviewedBy  String?
-  reviewer    User?         @relation("ApprovalManager", fields: [reviewedBy], references: [id])
-  comments    String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  @@map("time_off_requests")
+enum EventType {
+  HOLIDAY
+  PROFESSIONAL_DEVELOPMENT
+  SNOW_DAY
+  EARLY_DISMISSAL
+  NO_SCHOOL
+  CONFERENCE
+  MEETING
+  DEADLINE
 }
 
 model Notification {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+  
   title     String
   message   String
-  isRead    Boolean  @default(false)
-  type      String   // 'timecard', 'timeoff', 'calendar', 'system'
-  relatedId String?  // ID of related record
+  type      NotificationType
+  relatedId String?
+  read      Boolean  @default(false)
+  
   createdAt DateTime @default(now())
-
+  
   @@map("notifications")
 }
 
-model SystemSettings {
-  id                    String @id @default(cuid())
-  payPeriodStartDay     Int    @default(1) // 1=Monday, 7=Sunday
-  payPeriodLength       Int    @default(14) // days
-  defaultWorkHours      Float  @default(8.0)
-  timeCardReminderDays  Int    @default(2)
-  autoApprovalEnabled   Boolean @default(false)
-  emailNotifications    Boolean @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+enum NotificationType {
+  timecard
+  timeoff
+  calendar
+  system
+}
 
+model SystemSettings {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+  
+  updatedAt DateTime @updatedAt
+  
   @@map("system_settings")
 }

@@ -4,342 +4,442 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log('🌱 Seeding Oswayo Valley Staff Portal...');
 
-  // Create admin user
-  const adminPassword = await bcrypt.hash('Admin123!', 12);
-  
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@oswayo.com' },
-    update: {},
-    create: {
-      email: 'admin@oswayo.com',
-      firstName: 'System',
-      lastName: 'Administrator',
-      employeeId: 'ADMIN001',
-      passwordHash: adminPassword,
-      role: 'ADMIN',
-      department: 'Administration',
-      position: 'System Administrator',
-      isActive: true,
-      hireDate: new Date('2024-01-01')
-    }
-  });
+  // Clear existing data
+  await prisma.notification.deleteMany({});
+  await prisma.timeEntry.deleteMany({});
+  await prisma.timeCard.deleteMany({});
+  await prisma.timeOffRequest.deleteMany({});
+  await prisma.calendarEvent.deleteMany({});
+  await prisma.user.deleteMany({});
 
-  console.log(`👑 Created admin user: ${admin.email}`);
+  // Hash password for all users
+  const hashedPassword = await bcrypt.hash('Admin123!', 12);
 
-  // Create sample principal
-  const principalPassword = await bcrypt.hash('Principal123!', 12);
-  
-  const principal = await prisma.user.upsert({
-    where: { email: 'principal@oswayo.com' },
-    update: {},
-    create: {
-      email: 'principal@oswayo.com',
-      firstName: 'Jane',
-      lastName: 'Zaun',
-      employeeId: 'PRIN001',
-      passwordHash: principalPassword,
-      role: 'MANAGER',
-      department: 'Administration',
-      position: 'Principal',
-      isActive: true,
-      hireDate: new Date('2020-07-01')
-    }
-  });
-
-  console.log(`🏫 Created principal: ${principal.email}`);
-
-  // Create sample department heads/managers
-  const managers = [
-    {
-      email: 'math.dept@oswayo.com',
-      firstName: 'John',
-      lastName: 'Smith',
-      employeeId: 'MATH001',
-      department: 'Mathematics',
-      position: 'Department Head',
-      managerId: principal.id
-    },
-    {
-      email: 'english.dept@oswayo.com',
+  // Create District Administrator
+  const districtAdmin = await prisma.user.create({
+    data: {
+      employeeId: 'DA001',
       firstName: 'Sarah',
       lastName: 'Johnson',
-      employeeId: 'ENG001',
-      department: 'English',
-      position: 'Department Head',
-      managerId: principal.id
-    },
-    {
-      email: 'science.dept@oswayo.com',
-      firstName: 'Michael',
-      lastName: 'Brown',
-      employeeId: 'SCI001',
-      department: 'Science',
-      position: 'Department Head',
-      managerId: principal.id
-    }
-  ];
-
-  const createdManagers = [];
-  for (const managerData of managers) {
-    const password = await bcrypt.hash('Manager123!', 12);
-    
-    const manager = await prisma.user.upsert({
-      where: { email: managerData.email },
-      update: {},
-      create: {
-        ...managerData,
-        passwordHash: password,
-        role: 'MANAGER',
-        isActive: true,
-        hireDate: new Date('2021-08-15')
-      }
-    });
-    
-    createdManagers.push(manager);
-    console.log(`👥 Created manager: ${manager.email}`);
-  }
-
-  // Create sample staff members
-  const staffMembers = [
-    {
-      email: 'alice.teacher@oswayo.com',
-      firstName: 'Alice',
-      lastName: 'Wilson',
-      employeeId: 'MATH002',
-      department: 'Mathematics',
-      position: 'Math Teacher',
-      managerId: createdManagers[0].id
-    },
-    {
-      email: 'bob.teacher@oswayo.com',
-      firstName: 'Bob',
-      lastName: 'Davis',
-      employeeId: 'ENG002',
-      department: 'English',
-      position: 'English Teacher',
-      managerId: createdManagers[1].id
-    },
-    {
-      email: 'carol.teacher@oswayo.com',
-      firstName: 'Carol',
-      lastName: 'Miller',
-      employeeId: 'SCI002',
-      department: 'Science',
-      position: 'Science Teacher',
-      managerId: createdManagers[2].id
-    },
-    {
-      email: 'david.teacher@oswayo.com',
-      firstName: 'David',
-      lastName: 'Garcia',
-      employeeId: 'MATH003',
-      department: 'Mathematics',
-      position: 'Math Teacher',
-      managerId: createdManagers[0].id
-    }
-  ];
-
-  for (const staffData of staffMembers) {
-    const password = await bcrypt.hash('Staff123!', 12);
-    
-    const staff = await prisma.user.upsert({
-      where: { email: staffData.email },
-      update: {},
-      create: {
-        ...staffData,
-        passwordHash: password,
-        role: 'STAFF',
-        isActive: true,
-        hireDate: new Date('2022-08-15')
-      }
-    });
-    
-    console.log(`👤 Created staff member: ${staff.email}`);
-  }
-
-  // Create system settings
-  await prisma.systemSettings.upsert({
-    where: { id: 'default' },
-    update: {},
-    create: {
-      id: 'default',
-      payPeriodStartDay: 1, // Monday
-      payPeriodLength: 14,   // Bi-weekly
-      defaultWorkHours: 8.0,
-      timeCardReminderDays: 2,
-      autoApprovalEnabled: false,
-      emailNotifications: true
+      email: 'admin@oswayo.com',
+      password: hashedPassword,
+      role: 'DISTRICT_ADMIN',
+      department: 'Administration',
+      building: 'District Office',
+      hireDate: new Date('2020-01-01'),
+      phoneNumber: '814-555-0001',
     }
   });
 
-  console.log('⚙️ Created system settings');
+  // Create Principals
+  const elementaryPrincipal = await prisma.user.create({
+    data: {
+      employeeId: 'PR001',
+      firstName: 'Michael',
+      lastName: 'Davis',
+      email: 'principal.elementary@oswayo.com',
+      password: hashedPassword,
+      role: 'PRINCIPAL',
+      department: 'Administration',
+      building: 'Elementary School',
+      hireDate: new Date('2018-07-01'),
+      phoneNumber: '814-555-0002',
+    }
+  });
 
-  // Create sample calendar events for the current school year
+  const highSchoolPrincipal = await prisma.user.create({
+    data: {
+      employeeId: 'PR002',
+      firstName: 'Jennifer',
+      lastName: 'Wilson',
+      email: 'principal.highschool@oswayo.com',
+      password: hashedPassword,
+      role: 'PRINCIPAL',
+      department: 'Administration',
+      building: 'High School',
+      hireDate: new Date('2019-08-01'),
+      phoneNumber: '814-555-0003',
+    }
+  });
+
+  // Create Managers
+  const maintenanceManager = await prisma.user.create({
+    data: {
+      employeeId: 'MG001',
+      firstName: 'Robert',
+      lastName: 'Brown',
+      email: 'maintenance.manager@oswayo.com',
+      password: hashedPassword,
+      role: 'MANAGER',
+      department: 'Maintenance',
+      building: 'District Wide',
+      hireDate: new Date('2017-05-01'),
+      phoneNumber: '814-555-0004',
+    }
+  });
+
+  const foodServiceManager = await prisma.user.create({
+    data: {
+      employeeId: 'MG002',
+      firstName: 'Linda',
+      lastName: 'Garcia',
+      email: 'foodservice.manager@oswayo.com',
+      password: hashedPassword,
+      role: 'MANAGER',
+      department: 'Food Service',
+      building: 'District Wide',
+      hireDate: new Date('2016-08-15'),
+      phoneNumber: '814-555-0005',
+    }
+  });
+
+  // Create Full Time Faculty
+  const teachers = await Promise.all([
+    prisma.user.create({
+      data: {
+        employeeId: 'TC001',
+        firstName: 'Alice',
+        lastName: 'Smith',
+        email: 'alice.teacher@oswayo.com',
+        password: hashedPassword,
+        role: 'FULL_TIME_FACULTY',
+        department: 'Mathematics',
+        building: 'High School',
+        principalId: highSchoolPrincipal.id,
+        hireDate: new Date('2015-08-20'),
+        phoneNumber: '814-555-0010',
+      }
+    }),
+    prisma.user.create({
+      data: {
+        employeeId: 'TC002',
+        firstName: 'David',
+        lastName: 'Miller',
+        email: 'david.teacher@oswayo.com',
+        password: hashedPassword,
+        role: 'FULL_TIME_FACULTY',
+        department: 'English',
+        building: 'High School',
+        principalId: highSchoolPrincipal.id,
+        hireDate: new Date('2014-08-25'),
+        phoneNumber: '814-555-0011',
+      }
+    }),
+    prisma.user.create({
+      data: {
+        employeeId: 'TC003',
+        firstName: 'Emma',
+        lastName: 'Taylor',
+        email: 'emma.teacher@oswayo.com',
+        password: hashedPassword,
+        role: 'FULL_TIME_FACULTY',
+        department: 'Elementary',
+        building: 'Elementary School',
+        principalId: elementaryPrincipal.id,
+        hireDate: new Date('2016-08-22'),
+        phoneNumber: '814-555-0012',
+      }
+    })
+  ]);
+
+  // Create Staff Members
+  const staffMembers = await Promise.all([
+    // Custodians
+    prisma.user.create({
+      data: {
+        employeeId: 'ST001',
+        firstName: 'James',
+        lastName: 'Anderson',
+        email: 'james.custodian@oswayo.com',
+        password: hashedPassword,
+        role: 'STAFF',
+        department: 'Maintenance',
+        building: 'High School',
+        hireDate: new Date('2018-06-01'),
+        phoneNumber: '814-555-0020',
+      }
+    }),
+    prisma.user.create({
+      data: {
+        employeeId: 'ST002',
+        firstName: 'Maria',
+        lastName: 'Rodriguez',
+        email: 'maria.custodian@oswayo.com',
+        password: hashedPassword,
+        role: 'STAFF',
+        department: 'Maintenance',
+        building: 'Elementary School',
+        hireDate: new Date('2019-09-15'),
+        phoneNumber: '814-555-0021',
+      }
+    }),
+    // Secretaries
+    prisma.user.create({
+      data: {
+        employeeId: 'ST003',
+        firstName: 'Nancy',
+        lastName: 'White',
+        email: 'nancy.secretary@oswayo.com',
+        password: hashedPassword,
+        role: 'STAFF',
+        department: 'Office',
+        building: 'High School',
+        hireDate: new Date('2017-07-10'),
+        phoneNumber: '814-555-0022',
+      }
+    }),
+    // Paraprofessionals
+    prisma.user.create({
+      data: {
+        employeeId: 'ST004',
+        firstName: 'Kevin',
+        lastName: 'Clark',
+        email: 'kevin.para@oswayo.com',
+        password: hashedPassword,
+        role: 'STAFF',
+        department: 'Special Education',
+        building: 'Elementary School',
+        hireDate: new Date('2020-08-24'),
+        phoneNumber: '814-555-0023',
+      }
+    }),
+    // Cafeteria Workers
+    prisma.user.create({
+      data: {
+        employeeId: 'ST005',
+        firstName: 'Patricia',
+        lastName: 'Lewis',
+        email: 'patricia.cafeteria@oswayo.com',
+        password: hashedPassword,
+        role: 'STAFF',
+        department: 'Food Service',
+        building: 'High School',
+        hireDate: new Date('2019-08-19'),
+        phoneNumber: '814-555-0024',
+      }
+    }),
+    prisma.user.create({
+      data: {
+        employeeId: 'ST006',
+        firstName: 'Thomas',
+        lastName: 'Hall',
+        email: 'thomas.cafeteria@oswayo.com',
+        password: hashedPassword,
+        role: 'STAFF',
+        department: 'Food Service',
+        building: 'Elementary School',
+        hireDate: new Date('2021-01-15'),
+        phoneNumber: '814-555-0025',
+      }
+    }),
+    // Substitute Teacher (Long Term)
+    prisma.user.create({
+      data: {
+        employeeId: 'ST007',
+        firstName: 'Michelle',
+        lastName: 'Young',
+        email: 'michelle.substitute@oswayo.com',
+        password: hashedPassword,
+        role: 'STAFF',
+        department: 'Substitute Teaching',
+        building: 'District Wide',
+        hireDate: new Date('2023-10-01'),
+        phoneNumber: '814-555-0026',
+      }
+    })
+  ]);
+
+  // Set up manager relationships
+  const custodians = staffMembers.filter(s => s.department === 'Maintenance');
+  const cafeteriaWorkers = staffMembers.filter(s => s.department === 'Food Service');
+  const officeStaff = staffMembers.filter(s => s.department === 'Office');
+  const paraprofessionals = staffMembers.filter(s => s.department === 'Special Education');
+  const substitutes = staffMembers.filter(s => s.department === 'Substitute Teaching');
+
+  // Connect staff to managers
+  for (const custodian of custodians) {
+    await prisma.user.update({
+      where: { id: custodian.id },
+      data: {
+        managers: {
+          connect: { id: maintenanceManager.id }
+        }
+      }
+    });
+  }
+
+  for (const worker of cafeteriaWorkers) {
+    await prisma.user.update({
+      where: { id: worker.id },
+      data: {
+        managers: {
+          connect: { id: foodServiceManager.id }
+        }
+      }
+    });
+  }
+
+  // Office staff report to building principals
+  for (const staff of officeStaff) {
+    const principal = staff.building === 'High School' ? highSchoolPrincipal : elementaryPrincipal;
+    await prisma.user.update({
+      where: { id: staff.id },
+      data: {
+        managers: {
+          connect: { id: principal.id }
+        }
+      }
+    });
+  }
+
+  // Paraprofessionals report to building principals
+  for (const para of paraprofessionals) {
+    const principal = para.building === 'High School' ? highSchoolPrincipal : elementaryPrincipal;
+    await prisma.user.update({
+      where: { id: para.id },
+      data: {
+        managers: {
+          connect: { id: principal.id }
+        }
+      }
+    });
+  }
+
+  // Substitutes can report to multiple managers (example of multiple manager scenario)
+  for (const sub of substitutes) {
+    await prisma.user.update({
+      where: { id: sub.id },
+      data: {
+        managers: {
+          connect: [
+            { id: elementaryPrincipal.id },
+            { id: highSchoolPrincipal.id }
+          ]
+        }
+      }
+    });
+  }
+
+  // Create school calendar events
   const currentYear = new Date().getFullYear();
-  const schoolYearStart = new Date(currentYear, 7, 15); // August 15th
-  const schoolYearEnd = new Date(currentYear + 1, 5, 15); // June 15th next year
-
   const calendarEvents = [
     {
-      title: 'First Day of School',
-      description: 'Welcome back students and staff!',
-      date: new Date(currentYear, 7, 20), // August 20th
-      dayType: 'REGULAR'
-    },
-    {
       title: 'Labor Day',
-      description: 'Federal Holiday - No School',
-      date: getFirstMondayOfMonth(currentYear, 8), // September
-      dayType: 'HOLIDAY'
-    },
-    {
-      title: 'Columbus Day',
-      description: 'Federal Holiday - No School',
-      date: getSecondMondayOfMonth(currentYear, 9), // October
-      dayType: 'HOLIDAY'
+      startDate: new Date(`${currentYear}-09-02`),
+      endDate: new Date(`${currentYear}-09-02`),
+      type: 'HOLIDAY',
+      building: null, // District-wide
+      createdBy: districtAdmin.id
     },
     {
       title: 'Thanksgiving Break',
-      description: 'Thanksgiving Holiday - No School',
-      date: getThanksgivingDate(currentYear),
-      dayType: 'HOLIDAY'
+      startDate: new Date(`${currentYear}-11-28`),
+      endDate: new Date(`${currentYear}-11-29`),
+      type: 'HOLIDAY',
+      building: null,
+      createdBy: districtAdmin.id
     },
     {
-      title: 'Winter Break Start',
-      description: 'Winter Break Begins',
-      date: new Date(currentYear, 11, 23), // December 23rd
-      dayType: 'HOLIDAY'
+      title: 'Winter Break',
+      startDate: new Date(`${currentYear}-12-23`),
+      endDate: new Date(`${currentYear + 1}-01-03`),
+      type: 'HOLIDAY',
+      building: null,
+      createdBy: districtAdmin.id
     },
     {
-      title: "New Year's Day",
-      description: 'Federal Holiday - No School',
-      date: new Date(currentYear + 1, 0, 1), // January 1st next year
-      dayType: 'HOLIDAY'
-    },
-    {
-      title: 'Martin Luther King Jr. Day',
-      description: 'Federal Holiday - No School',
-      date: getThirdMondayOfMonth(currentYear + 1, 0), // January next year
-      dayType: 'HOLIDAY'
-    },
-    {
-      title: "Presidents' Day",
-      description: 'Federal Holiday - No School',
-      date: getThirdMondayOfMonth(currentYear + 1, 1), // February next year
-      dayType: 'HOLIDAY'
-    },
-    {
-      title: 'Memorial Day',
-      description: 'Federal Holiday - No School',
-      date: getLastMondayOfMonth(currentYear + 1, 4), // May next year
-      dayType: 'HOLIDAY'
-    },
-    {
-      title: 'Last Day of School',
-      description: 'End of school year',
-      date: new Date(currentYear + 1, 5, 10), // June 10th next year
-      dayType: 'REGULAR'
+      title: 'Professional Development Day',
+      startDate: new Date(`${currentYear}-10-15`),
+      endDate: new Date(`${currentYear}-10-15`),
+      type: 'PROFESSIONAL_DEVELOPMENT',
+      building: null,
+      createdBy: districtAdmin.id
     }
   ];
 
-  for (const eventData of calendarEvents) {
-    await prisma.calendarEvent.upsert({
-      where: { 
-        date: eventData.date
-      },
-      update: {},
-      create: {
-        ...eventData,
-        createdById: admin.id
+  for (const event of calendarEvents) {
+    await prisma.calendarEvent.create({ data: event });
+  }
+
+  // Create sample time cards for staff members
+  const currentDate = new Date();
+  const periodStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const periodEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+  for (const staff of staffMembers) {
+    if (staff.role === 'STAFF') {
+      const timeCard = await prisma.timeCard.create({
+        data: {
+          employeeId: staff.id,
+          periodStart,
+          periodEnd,
+          status: Math.random() > 0.5 ? 'DRAFT' : 'SUBMITTED',
+          totalHours: 40
+        }
+      });
+
+      // Add some sample time entries
+      for (let i = 0; i < 5; i++) {
+        const entryDate = new Date(periodStart);
+        entryDate.setDate(entryDate.getDate() + i);
+        
+        await prisma.timeEntry.create({
+          data: {
+            timeCardId: timeCard.id,
+            date: entryDate,
+            timeIn: new Date(entryDate.setHours(8, 0)),
+            timeOut: new Date(entryDate.setHours(16, 0)),
+            hours: 8,
+            dayType: 'REGULAR'
+          }
+        });
       }
-    });
+    }
   }
 
-  console.log(`📅 Created ${calendarEvents.length} calendar events`);
-
-  // Create sample notifications
-  const notifications = [
+  // Create sample time off requests
+  const sampleTimeOffRequests = [
     {
-      userId: createdManagers[0].id,
-      title: 'Welcome to the Staff Portal',
-      message: 'Your account has been created. Please review the time card and calendar features.',
-      type: 'system'
+      employeeId: teachers[0].id,
+      startDate: new Date(`${currentYear}-11-15`),
+      endDate: new Date(`${currentYear}-11-15`),
+      type: 'PERSONAL',
+      reason: 'Doctor appointment',
+      status: 'PENDING'
     },
     {
-      userId: staffMembers[0] ? (await prisma.user.findUnique({ where: { email: staffMembers[0].email } }))?.id : null,
-      title: 'Time Card Reminder',
-      message: 'Don\'t forget to submit your time card by Friday.',
-      type: 'timecard'
+      employeeId: staffMembers[0].id,
+      startDate: new Date(`${currentYear}-12-20`),
+      endDate: new Date(`${currentYear}-12-22`),
+      type: 'VACATION',
+      reason: 'Family vacation',
+      status: 'APPROVED',
+      approvedBy: maintenanceManager.id
     }
   ];
 
-  for (const notificationData of notifications.filter(n => n.userId)) {
-    await prisma.notification.create({
-      data: notificationData
-    });
+  for (const request of sampleTimeOffRequests) {
+    await prisma.timeOffRequest.create({ data: request });
   }
 
-  console.log(`🔔 Created ${notifications.filter(n => n.userId).length} notifications`);
-
-  console.log('✅ Database seeding completed successfully!');
-  
-  console.log('\n📋 Sample Accounts Created:');
-  console.log('Admin: admin@oswayo.com / Admin123!');
-  console.log('Principal: principal@oswayo.com / Principal123!');
-  console.log('Manager: math.dept@oswayo.com / Manager123!');
-  console.log('Staff: alice.teacher@oswayo.com / Staff123!');
-}
-
-// Helper functions for date calculations
-function getFirstMondayOfMonth(year, month) {
-  const date = new Date(year, month, 1);
-  while (date.getDay() !== 1) {
-    date.setDate(date.getDate() + 1);
-  }
-  return date;
-}
-
-function getSecondMondayOfMonth(year, month) {
-  const firstMonday = getFirstMondayOfMonth(year, month);
-  return new Date(firstMonday.getTime() + 7 * 24 * 60 * 60 * 1000);
-}
-
-function getThirdMondayOfMonth(year, month) {
-  const firstMonday = getFirstMondayOfMonth(year, month);
-  return new Date(firstMonday.getTime() + 14 * 24 * 60 * 60 * 1000);
-}
-
-function getLastMondayOfMonth(year, month) {
-  const lastDay = new Date(year, month + 1, 0);
-  while (lastDay.getDay() !== 1) {
-    lastDay.setDate(lastDay.getDate() - 1);
-  }
-  return lastDay;
-}
-
-function getThanksgivingDate(year) {
-  // Fourth Thursday in November
-  const november = new Date(year, 10, 1); // November 1st
-  let thursday = november;
-  
-  // Find first Thursday
-  while (thursday.getDay() !== 4) {
-    thursday.setDate(thursday.getDate() + 1);
-  }
-  
-  // Add 3 weeks to get fourth Thursday
-  thursday.setDate(thursday.getDate() + 21);
-  return thursday;
+  console.log('✅ Database seeded successfully!');
+  console.log('🔐 Login credentials:');
+  console.log('  District Admin: admin@oswayo.com / Admin123!');
+  console.log('  Elementary Principal: principal.elementary@oswayo.com / Admin123!');
+  console.log('  High School Principal: principal.highschool@oswayo.com / Admin123!');
+  console.log('  Maintenance Manager: maintenance.manager@oswayo.com / Admin123!');
+  console.log('  Food Service Manager: foodservice.manager@oswayo.com / Admin123!');
+  console.log('  Teacher: alice.teacher@oswayo.com / Admin123!');
+  console.log('  Staff: james.custodian@oswayo.com / Admin123!');
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
+  .catch((e) => {
     console.error(e);
-    await prisma.$disconnect();
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });
