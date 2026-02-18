@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: oswayo-staff-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: oswayo_staff
+      POSTGRES_PASSWORD: StaffPortal2024!
+      POSTGRES_DB: oswayo_staff_portal
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oswayo_staff -d oswayo_staff_portal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Staff Portal Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: oswayo-staff-portal
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://oswayo_staff:StaffPortal2024!@postgres:5432/oswayo_staff_portal
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-oswayo-2024
+      - JWT_EXPIRES_IN=15m
+      - JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this-in-production-oswayo-2024
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=${SMTP_USER:-your-email@oswayo.com}
+      - SMTP_PASS=${SMTP_PASS:-your-app-password}
+      - FROM_EMAIL=${FROM_EMAIL:-noreply@staffportal.oswayo.com}
+      - FRONTEND_URL=https://staffportal.oswayo.com
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - app_uploads:/app/server/uploads
+      - app_logs:/app/server/logs
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm start"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx Proxy (Optional - for SSL termination)
+  nginx:
+    image: nginx:alpine
+    container_name: oswayo-staff-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/ssl/certs:ro
+      - nginx_logs:/var/log/nginx
+    command: ["nginx", "-g", "daemon off;"]
+
+volumes:
+  postgres_data:
+    driver: local
+  app_uploads:
+    driver: local
+  app_logs:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  default:
+    driver: bridge

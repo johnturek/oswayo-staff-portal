@@ -1,0 +1,54 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: oswayo_staff_portal
+      POSTGRES_USER: oswayo_staff
+      POSTGRES_PASSWORD: StaffPortal2024SecurePass!
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oswayo_staff -d oswayo_staff_portal"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://oswayo_staff:StaffPortal2024SecurePass!@postgres:5432/oswayo_staff_portal
+      JWT_SECRET: oswayo-staff-portal-jwt-secret-2024-secure-key
+      JWT_REFRESH_SECRET: oswayo-staff-portal-refresh-secret-2024-secure-key
+      FRONTEND_URL: https://staffportal.oswayo.com
+      APP_URL: https://staffportal.oswayo.com
+      APP_NAME: Oswayo Staff Portal
+      ADMIN_EMAIL: admin@oswayo.com
+      SMTP_FROM: noreply@staffportal.oswayo.com
+      BCRYPT_ROUNDS: 12
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - app_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  postgres_data:
+    driver: local
+  app_uploads:
+    driver: local

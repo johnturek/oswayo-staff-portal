@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+  
+  /* Improve mobile tap targets */
+  button, a, input, select, textarea {
+    touch-action: manipulation;
+  }
+  
+  /* Ensure buttons are at least 44px for mobile accessibility */
+  .btn {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+  }
+  
+  /* Custom scrollbar for webkit browsers */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+}
+
+@layer components {
+  /* Form components */
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-oswayo-secondary focus:border-transparent;
+  }
+  
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+  
+  .form-error {
+    @apply text-red-600 text-sm mt-1;
+  }
+  
+  /* Button components */
+  .btn-primary {
+    @apply bg-oswayo-primary hover:bg-oswayo-secondary text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-oswayo-secondary focus:ring-offset-2;
+  }
+  
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 text-oswayo-primary border border-oswayo-primary font-medium py-2 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-oswayo-secondary focus:ring-offset-2;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+  }
+  
+  .btn-success {
+    @apply bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+  }
+  
+  /* Card components */
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200;
+  }
+  
+  .card-header {
+    @apply px-4 py-3 border-b border-gray-200;
+  }
+  
+  .card-body {
+    @apply p-4;
+  }
+  
+  /* Status badges */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-pending {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  
+  .badge-approved {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .badge-rejected {
+    @apply bg-red-100 text-red-800;
+  }
+  
+  .badge-draft {
+    @apply bg-gray-100 text-gray-800;
+  }
+  
+  .badge-submitted {
+    @apply bg-blue-100 text-blue-800;
+  }
+  
+  /* Navigation components */
+  .nav-link {
+    @apply flex items-center px-4 py-3 text-gray-600 hover:text-oswayo-primary hover:bg-gray-50 transition-colors duration-200;
+  }
+  
+  .nav-link.active {
+    @apply text-oswayo-primary bg-oswayo-primary/5 border-r-2 border-oswayo-primary;
+  }
+  
+  /* Mobile-specific utilities */
+  .mobile-menu-item {
+    @apply flex items-center justify-between w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 active:bg-gray-100;
+  }
+  
+  .mobile-safe-area {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Loading states */
+  .loading-spinner {
+    @apply animate-spin h-5 w-5 text-oswayo-secondary;
+  }
+  
+  .skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+  
+  /* Notification styles */
+  .notification {
+    @apply p-4 rounded-md border-l-4;
+  }
+  
+  .notification-success {
+    @apply bg-green-50 border-green-400 text-green-800;
+  }
+  
+  .notification-error {
+    @apply bg-red-50 border-red-400 text-red-800;
+  }
+  
+  .notification-warning {
+    @apply bg-yellow-50 border-yellow-400 text-yellow-800;
+  }
+  
+  .notification-info {
+    @apply bg-blue-50 border-blue-400 text-blue-800;
+  }
+}
+
+@layer utilities {
+  /* Touch-friendly utilities */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Mobile-first responsive utilities */
+  .mobile-container {
+    @apply mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .mobile-grid {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3;
+  }
+  
+  /* Print utilities */
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+  }
+}

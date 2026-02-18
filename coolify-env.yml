@@ -1,0 +1,15 @@
+# Production Environment Configuration for Coolify
+NODE_ENV: production
+PORT: 3000
+DATABASE_URL: postgresql://oswayo_staff:StaffPortal2024!@postgres:5432/oswayo_staff_portal
+JWT_SECRET: oswayo-staff-portal-jwt-secret-2024-secure-key
+JWT_REFRESH_SECRET: oswayo-staff-portal-refresh-secret-2024-secure-key
+APP_NAME: "Oswayo Staff Portal"
+APP_URL: https://staffportal.oswayo.com
+ADMIN_EMAIL: admin@oswayo.com
+BCRYPT_ROUNDS: 12
+RATE_LIMIT_WINDOW: 900000
+RATE_LIMIT_MAX: 100
+MAX_FILE_SIZE: 5242880
+UPLOAD_DIR: /app/uploads
+SESSION_SECRET: oswayo-staff-session-secret-2024-secure

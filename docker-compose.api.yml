@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+  app:
+    image: node:18-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run build && npm start"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://oswayo_staff:StaffPortal2024!@postgres:5432/oswayo_staff_portal
+      JWT_SECRET: oswayo-staff-portal-2024-secure-key
+      JWT_EXPIRES_IN: 24h
+      CORS_ORIGIN: https://staffportal.oswayo.com
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - app_data:/app
+      
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: oswayo_staff_portal
+      POSTGRES_USER: oswayo_staff
+      POSTGRES_PASSWORD: StaffPortal2024!
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oswayo_staff -d oswayo_staff_portal"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+  app_data:

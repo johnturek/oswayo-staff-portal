@@ -1,0 +1,8 @@
+{
+  "name": "oswayo-staff-portal",
+  "description": "Complete HR Management System",
+  "project_uuid": "w0gwws4ogcww0wggs0s040ok",
+  "environment_uuid": "qgsgocosww4s84k480k0s0gc", 
+  "server_uuid": "r4w480gg0cg4kws8gwckgsww",
+  "docker_compose_raw": "version: '3.8'\nservices:\n  postgres:\n    image: postgres:15-alpine\n    environment:\n      POSTGRES_DB: oswayo_staff_portal\n      POSTGRES_USER: oswayo_staff\n      POSTGRES_PASSWORD: StaffPortal2024!\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n    ports:\n      - \"5432:5432\"\n  app:\n    build: .\n    environment:\n      NODE_ENV: production\n      PORT: 3000\n      DATABASE_URL: postgresql://oswayo_staff:StaffPortal2024!@postgres:5432/oswayo_staff_portal\n    ports:\n      - \"3000:3000\"\n    depends_on:\n      - postgres\nvolumes:\n  postgres_data:"
+}

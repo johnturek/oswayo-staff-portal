@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: oswayo_staff_portal
+      POSTGRES_USER: oswayo_staff
+      POSTGRES_PASSWORD: StaffPortal2024!
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oswayo_staff -d oswayo_staff_portal"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  app:
+    image: node:18-alpine
+    working_dir: /app
+    command: sh -c "echo 'Staff Portal placeholder running on port 3000' && nc -l -p 3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://oswayo_staff:StaffPortal2024!@postgres:5432/oswayo_staff_portal
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:

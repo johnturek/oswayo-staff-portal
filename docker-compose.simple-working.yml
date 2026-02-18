@@ -1,0 +1,23 @@
+version: '3.8'
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    environment:
+      - NGINX_HOST=staffportal.oswayo.com
+    volumes:
+      - ./html:/usr/share/nginx/html
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: staffportal
+      POSTGRES_USER: staff
+      POSTGRES_PASSWORD: StaffPortal2024!
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

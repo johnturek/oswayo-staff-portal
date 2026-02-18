@@ -1,0 +1,87 @@
+# Coolify Deployment Configuration for Oswayo Valley Staff Portal
+# Deploy to: my.oswayo.com:8000
+# Domain: staffportal.oswayo.com
+# API Key: 4|wYrir3xxv4VHhjjKWoy6sE3Xk4V2jOxS3nLsl3CG5d4b2561
+
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: oswayo_staff
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-StaffPortal2024SecurePass!}
+      POSTGRES_DB: oswayo_staff_portal
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oswayo_staff -d oswayo_staff_portal"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  app:
+    image: node:18-alpine
+    working_dir: /app
+    command: sh -c "npm install && npx prisma migrate deploy && npx prisma db seed && npm start"
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://oswayo_staff:${DATABASE_PASSWORD:-StaffPortal2024SecurePass!}@database:5432/oswayo_staff_portal
+      
+      # JWT Configuration
+      - JWT_SECRET=${JWT_SECRET:-oswayo-staff-portal-jwt-secret-2024-very-secure-key}
+      - JWT_EXPIRES_IN=15m
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-oswayo-staff-portal-refresh-secret-2024-very-secure-key}
+      - JWT_REFRESH_EXPIRES_IN=7d
+      
+      # SMTP Configuration (Office 365)
+      - SMTP_HOST=smtp.office365.com
+      - SMTP_PORT=587
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - FROM_EMAIL=noreply@staffportal.oswayo.com
+      
+      # Application Configuration
+      - NODE_ENV=production
+      - PORT=3000
+      - FRONTEND_URL=https://staffportal.oswayo.com
+      
+      # Security
+      - HELMET_CONTENT_SECURITY_POLICY=false
+      - CORS_ORIGIN=https://staffportal.oswayo.com
+      
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - uploads:/app/server/uploads
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    labels:
+      # Coolify Labels for automatic SSL and domain configuration
+      - coolify.managed=true
+      - coolify.name=oswayo-staff-portal
+      - coolify.domain=staffportal.oswayo.com
+      - coolify.port=3000
+      - coolify.https=true
+      - coolify.redirect=true
+      - traefik.enable=true
+      - traefik.http.routers.oswayo-staff-portal.rule=Host(`staffportal.oswayo.com`)
+      - traefik.http.routers.oswayo-staff-portal.tls.certresolver=letsencrypt
+      - traefik.http.services.oswayo-staff-portal.loadbalancer.server.port=3000
+
+volumes:
+  postgres_data:
+    driver: local
+  node_modules:
+    driver: local
+  uploads:
+    driver: local
+
+networks:
+  default:
+    external: true
+    name: coolify
