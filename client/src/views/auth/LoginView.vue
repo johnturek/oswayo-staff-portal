@@ -65,8 +65,18 @@ export default {
       error.value = ''
       
       try {
-        await authStore.login(email.value, password.value)
-        router.push('/')
+        const credentials = {
+          email: email.value,
+          password: password.value
+        }
+        
+        const result = await authStore.login(credentials)
+        
+        if (result.success) {
+          router.push('/')
+        } else {
+          error.value = result.message || 'Login failed'
+        }
       } catch (err) {
         error.value = err.message || 'Login failed'
       } finally {
