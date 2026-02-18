@@ -3,11 +3,11 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install system dependencies
-RUN apk add --no-cache curl openssl openssl-dev postgresql-client
+RUN apk add --no-cache curl
 
-# Copy package files and install all dependencies
+# Copy package files and install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm install --omit=dev
 
 # Copy all source code
 COPY . .
@@ -34,5 +34,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:3000/health || exit 1
 
-# Start with minimal server for debugging
-CMD ["node", "minimal-server.js"]
+# Start simple working server
+CMD ["node", "simple-working.js"]
