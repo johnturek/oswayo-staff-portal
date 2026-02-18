@@ -14,7 +14,7 @@ const authenticateToken = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Get fresh user data from database
+    // Get fresh user data from database with correct field names
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: {
@@ -25,13 +25,13 @@ const authenticateToken = async (req, res, next) => {
         employeeId: true,
         role: true,
         department: true,
-        position: true,
-        isActive: true,
-        managerId: true
+        building: true,
+        active: true, // Correct field name
+        principalId: true
       }
     });
 
-    if (!user || !user.isActive) {
+    if (!user || !user.active) {
       return res.status(401).json({ error: 'Invalid or inactive user' });
     }
 
@@ -50,7 +50,11 @@ const requireRole = (roles) => {
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+      return res.status(403).json({ 
+        error: 'Insufficient permissions',
+        required: roles,
+        current: req.user.role
+      });
     }
 
     next();
@@ -62,26 +66,17 @@ const requireManager = async (req, res, next) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  // Check if user is a manager (has direct reports) or is an admin
-  if (req.user.role === 'ADMIN') {
+  // Check if user is a district admin
+  if (req.user.role === 'DISTRICT_ADMIN') {
     return next();
   }
 
-  try {
-    const directReports = await prisma.user.findMany({
-      where: { managerId: req.user.id },
-      select: { id: true }
-    });
-
-    if (directReports.length > 0) {
-      return next();
-    }
-
-    return res.status(403).json({ error: 'Manager privileges required' });
-  } catch (error) {
-    console.error('Manager check failed:', error.message);
-    return res.status(500).json({ error: 'Authorization check failed' });
+  // Check if user is a principal or manager
+  if (['PRINCIPAL', 'MANAGER'].includes(req.user.role)) {
+    return next();
   }
+
+  return res.status(403).json({ error: 'Manager privileges required' });
 };
 
 const generateTokens = (user) => {
@@ -92,10 +87,10 @@ const generateTokens = (user) => {
   };
 
   const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '15m'
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h'
   });
 
-  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
+  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
   });
 
@@ -104,7 +99,7 @@ const generateTokens = (user) => {
 
 const verifyRefreshToken = (token) => {
   try {
-    return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    return jwt.verify(token, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
   } catch (error) {
     throw new Error('Invalid refresh token');
   }
