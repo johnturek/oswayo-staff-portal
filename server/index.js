@@ -21,7 +21,7 @@ function getAuthUser(req) {
   if (!auth || !auth.startsWith('Bearer ')) return null;
   
   const token = auth.substring(7);
-  if (!token.startsWith('oswayo_token_')) return null;
+  if (!token.startsWith('oswayo_token_') || !activeSessions.has(token)) return null;
   
   // Extract user info from token
   const role = token.includes('district_admin') ? 'DISTRICT_ADMIN' : 
@@ -40,6 +40,17 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'healthy',
+    message: 'Oswayo Staff Portal API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    activeSessions: activeSessions.size
+  });
+});
+
 // =================== AUTHENTICATION ===================
 
 app.post('/api/auth/login', (req, res) => {
@@ -49,13 +60,16 @@ app.post('/api/auth/login', (req, res) => {
   
   if (password === 'Admin123!' && staffDirectory[email]) {
     const user = staffDirectory[email];
+    const token = `oswayo_token_${Date.now()}_${user.role.toLowerCase()}`;
+    activeSessions.add(token);
+    
     console.log(`✅ Login successful: ${email} (${user.role})`);
     
     res.json({
       success: true,
       message: 'Login successful',
       user: user,
-      token: `oswayo_token_${Date.now()}_${user.role.toLowerCase()}`
+      token: token
     });
   } else {
     console.log(`❌ Login failed: ${email}`);
@@ -79,6 +93,12 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 app.post('/api/auth/logout', (req, res) => {
+  const auth = req.headers.authorization;
+  if (auth && auth.startsWith('Bearer ')) {
+    const token = auth.substring(7);
+    activeSessions.delete(token);
+  }
+  
   res.json({
     success: true,
     message: 'Logged out successfully'
@@ -510,18 +530,67 @@ app.get('/api/dashboard/stats', (req, res) => {
 });
 
 app.get('/api/timecards', (req, res) => {
+  const authUser = getAuthUser(req);
+  if (!authUser) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  // Return user's own timecards
+  const userTimeCards = mockTimeCards.filter(tc => tc.employee.id === authUser.id);
+  
   res.json({
     success: true,
-    data: [],
-    message: 'Time tracking functionality coming soon'
+    data: userTimeCards,
+    message: userTimeCards.length === 0 ? 'No timecards found' : `Found ${userTimeCards.length} timecards`
   });
 });
 
 app.get('/api/timeoff', (req, res) => {
+  const authUser = getAuthUser(req);
+  if (!authUser) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  // Return user's own time off requests
+  const userTimeOffRequests = mockTimeOffRequests.filter(r => r.employee.id === authUser.id);
+  
   res.json({
     success: true,
-    data: [],
-    message: 'Time off requests coming soon'
+    data: userTimeOffRequests,
+    message: userTimeOffRequests.length === 0 ? 'No time off requests found' : `Found ${userTimeOffRequests.length} requests`
+  });
+});
+
+app.get('/api/profile', (req, res) => {
+  const authUser = getAuthUser(req);
+  if (!authUser) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  res.json({
+    success: true,
+    profile: authUser
+  });
+});
+
+app.put('/api/profile', (req, res) => {
+  const authUser = getAuthUser(req);
+  if (!authUser) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  // Update allowed profile fields
+  const allowedFields = ['firstName', 'lastName', 'phoneNumber', 'emergencyContact', 'emergencyPhone'];
+  allowedFields.forEach(field => {
+    if (req.body[field] !== undefined) {
+      authUser[field] = req.body[field];
+    }
+  });
+  
+  res.json({
+    success: true,
+    message: 'Profile updated successfully',
+    profile: authUser
   });
 });
 
@@ -552,15 +621,6 @@ app.get('/api/notifications', (req, res) => {
         createdAt: new Date().toISOString()
       }
     ]
-  });
-});
-
-// Catch-all for other API endpoints
-app.use('/api/*', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Feature coming soon',
-    endpoint: req.path
   });
 });
 
