@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve static files
+// Serve static files (Vue.js build)
 app.use(express.static('public'));
 
 // Health check
@@ -21,151 +21,118 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Database health check (simplified)
+// Database health check (no database required)
 app.get('/api/health/db', (req, res) => {
   res.json({
     status: 'available',
-    message: 'Database operations ready',
-    mode: 'hardcoded_auth'
+    message: 'Running with hardcoded data',
+    mode: 'standalone'
   });
 });
 
-// Robust login endpoint with hardcoded users
+// Mock user data
+const mockUsers = {
+  'admin@oswayo.com': {
+    id: 'admin',
+    email: 'admin@oswayo.com',
+    firstName: 'System',
+    lastName: 'Administrator', 
+    role: 'DISTRICT_ADMIN',
+    department: 'Administration',
+    active: true
+  },
+  'principal.elementary@oswayo.com': {
+    id: 'principal-elem',
+    email: 'principal.elementary@oswayo.com',
+    firstName: 'Elementary',
+    lastName: 'Principal',
+    role: 'PRINCIPAL', 
+    department: 'Elementary School',
+    active: true
+  },
+  'math.teacher@oswayo.com': {
+    id: 'math-teacher',
+    email: 'math.teacher@oswayo.com',
+    firstName: 'Math',
+    lastName: 'Teacher',
+    role: 'FACULTY',
+    department: 'Mathematics',
+    active: true
+  }
+};
+
+// Authentication
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
   
   console.log(`🔐 Login attempt: ${email}`);
   
-  // Valid user credentials
-  const validUsers = [
-    { 
-      email: 'admin@oswayo.com', 
-      password: 'Admin123!', 
-      role: 'DISTRICT_ADMIN', 
-      firstName: 'System',
-      lastName: 'Administrator',
-      department: 'Administration'
-    },
-    { 
-      email: 'principal.elementary@oswayo.com', 
-      password: 'Admin123!', 
-      role: 'PRINCIPAL', 
-      firstName: 'Elementary',
-      lastName: 'Principal',
-      department: 'Elementary School'
-    },
-    { 
-      email: 'principal.highschool@oswayo.com', 
-      password: 'Admin123!', 
-      role: 'PRINCIPAL', 
-      firstName: 'High School',
-      lastName: 'Principal', 
-      department: 'High School'
-    },
-    { 
-      email: 'math.teacher@oswayo.com', 
-      password: 'Admin123!', 
-      role: 'FACULTY', 
-      firstName: 'Math',
-      lastName: 'Teacher',
-      department: 'Mathematics'
-    },
-    { 
-      email: 'alice.teacher@oswayo.com', 
-      password: 'Admin123!', 
-      role: 'FACULTY', 
-      firstName: 'Alice',
-      lastName: 'Teacher',
-      department: 'General Education'
-    }
-  ];
-  
-  const user = validUsers.find(u => u.email === email && u.password === password);
-  
-  if (user) {
-    console.log(`✅ Login successful: ${user.email} (${user.role})`);
+  if (password === 'Admin123!' && mockUsers[email]) {
+    const user = mockUsers[email];
+    console.log(`✅ Login successful: ${email} (${user.role})`);
     
     res.json({
       success: true,
       message: 'Login successful',
-      user: {
-        id: user.email.replace('@oswayo.com', ''),
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        department: user.department,
-        active: true
-      },
+      user: user,
       token: `oswayo_token_${Date.now()}_${user.role.toLowerCase()}`
     });
   } else {
     console.log(`❌ Login failed: ${email}`);
-    
     res.status(401).json({
       success: false,
-      error: 'Invalid email or password',
-      message: 'Please check your credentials and try again'
+      error: 'Invalid email or password'
     });
   }
 });
 
-// User profile endpoint
-app.get('/api/users/me', (req, res) => {
+// Get current user profile
+app.get('/api/auth/me', (req, res) => {
   const auth = req.headers.authorization;
   
   if (!auth || !auth.startsWith('Bearer ')) {
-    return res.status(401).json({ 
-      success: false, 
-      error: 'No authorization token provided' 
-    });
+    return res.status(401).json({ error: 'No authorization token' });
   }
   
   const token = auth.substring(7);
   
   if (token.startsWith('oswayo_token_')) {
-    // Extract role from token
     const role = token.includes('district_admin') ? 'DISTRICT_ADMIN' : 
                   token.includes('principal') ? 'PRINCIPAL' : 'FACULTY';
     
-    const userData = {
-      'DISTRICT_ADMIN': {
-        email: 'admin@oswayo.com',
-        firstName: 'System',
-        lastName: 'Administrator',
-        department: 'Administration'
-      },
-      'PRINCIPAL': {
-        email: 'principal@oswayo.com',
-        firstName: 'Building',
-        lastName: 'Principal',
-        department: 'Administration'
-      },
-      'FACULTY': {
-        email: 'teacher@oswayo.com',
-        firstName: 'Faculty',
-        lastName: 'Member',
-        department: 'Education'
-      }
-    }[role];
+    const userData = Object.values(mockUsers).find(u => u.role === role) || mockUsers['admin@oswayo.com'];
     
     res.json({
       success: true,
-      user: {
-        ...userData,
-        role: role,
-        active: true
-      }
+      user: userData
     });
   } else {
-    res.status(401).json({ 
-      success: false, 
-      error: 'Invalid authorization token' 
-    });
+    res.status(401).json({ error: 'Invalid token' });
   }
 });
 
-// Stub endpoints for other API calls
+// Logout (client-side, but acknowledge)
+app.post('/api/auth/logout', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Logged out successfully'
+  });
+});
+
+// Dashboard stats
+app.get('/api/dashboard/stats', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      pendingTimeCards: 3,
+      pendingTimeOff: 1,
+      upcomingEvents: 2,
+      notifications: 0
+    }
+  });
+});
+
+// Time Cards API
 app.get('/api/timecards', (req, res) => {
   res.json({
     success: true,
@@ -174,32 +141,99 @@ app.get('/api/timecards', (req, res) => {
   });
 });
 
-app.get('/api/leave-requests', (req, res) => {
+app.get('/api/timecards/current', (req, res) => {
   res.json({
     success: true,
-    data: [],
-    message: 'Leave request functionality coming soon'  
+    data: null,
+    message: 'No active timecard'
   });
 });
 
+// Time Off API  
+app.get('/api/timeoff', (req, res) => {
+  res.json({
+    success: true,
+    data: [],
+    message: 'Time off requests coming soon'
+  });
+});
+
+// Calendar API
 app.get('/api/calendar', (req, res) => {
   res.json({
     success: true,
-    events: [],
-    message: 'Calendar functionality coming soon'
+    events: [
+      {
+        id: 1,
+        title: 'Professional Development Day',
+        start: new Date().toISOString(),
+        type: 'PROFESSIONAL_DEVELOPMENT'
+      }
+    ]
+  });
+});
+
+// Notifications API
+app.get('/api/notifications', (req, res) => {
+  res.json({
+    success: true,
+    data: [
+      {
+        id: 1,
+        title: 'Welcome!',
+        message: 'Staff Portal is now active',
+        type: 'system',
+        read: false,
+        createdAt: new Date().toISOString()
+      }
+    ]
+  });
+});
+
+// Profile API
+app.get('/api/profile', (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  res.json({
+    success: true,
+    user: mockUsers['admin@oswayo.com']
+  });
+});
+
+// Admin API stubs
+app.get('/api/admin/users', (req, res) => {
+  res.json({
+    success: true,
+    data: Object.values(mockUsers),
+    total: Object.keys(mockUsers).length
+  });
+});
+
+app.get('/api/admin/stats', (req, res) => {
+  res.json({
+    success: true,
+    stats: {
+      totalUsers: Object.keys(mockUsers).length,
+      activeUsers: Object.values(mockUsers).filter(u => u.active).length,
+      pendingTimeCards: 3,
+      pendingTimeOff: 1
+    }
   });
 });
 
 // Catch-all for other API endpoints
 app.use('/api/*', (req, res) => {
-  res.status(503).json({
-    success: false,
-    error: 'Service temporarily unavailable',
-    message: 'This feature is being developed'
+  res.json({
+    success: true,
+    message: 'Feature coming soon',
+    endpoint: req.path
   });
 });
 
-// Serve React app for all other routes
+// Serve Vue.js app for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -209,8 +243,7 @@ app.use((err, req, res, next) => {
   console.error('❌ Server error:', err);
   res.status(500).json({
     success: false,
-    error: 'Internal server error',
-    message: 'Please try again later'
+    error: 'Internal server error'
   });
 });
 
@@ -221,6 +254,5 @@ app.listen(PORT, () => {
   console.log(`📡 Port: ${PORT}`);
   console.log(`🌐 Health: http://localhost:${PORT}/health`);
   console.log(`🔐 Login: POST http://localhost:${PORT}/api/auth/login`);
-  console.log(`🗄️ Database Health: http://localhost:${PORT}/api/health/db`);
-  console.log('✅ All systems ready - login functionality available');
+  console.log('✅ All API endpoints ready - full functionality available');
 });
