@@ -335,9 +335,12 @@ export default {
       try {
         loading.value = true
         const response = await adminApi.getUsers()
-        users.value = response.data.users
+        console.log('API Response:', response.data) // Debug log
+        users.value = response.data.data // Correct path to users array
       } catch (error) {
         console.error('Failed to load users:', error)
+        // Show user-friendly error
+        alert('Failed to load users. Please refresh the page.')
       } finally {
         loading.value = false
       }
