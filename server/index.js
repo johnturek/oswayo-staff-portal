@@ -5,6 +5,9 @@ const { staffDirectory, mockTimeCards, mockTimeOffRequests } = require('./admin-
 
 const app = express();
 
+// Session storage for token invalidation
+const activeSessions = new Set();
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -201,6 +204,61 @@ app.post('/api/admin/users/:id/reset-password', (req, res) => {
   });
 });
 
+app.delete('/api/admin/users/:id', (req, res) => {
+  const authUser = getAuthUser(req);
+  if (!authUser || authUser.role !== 'DISTRICT_ADMIN') {
+    return res.status(403).json({ error: 'Only district admin can delete users' });
+  }
+  
+  const user = Object.values(staffDirectory).find(u => u.id === req.params.id);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  
+  // Don't actually delete, just deactivate
+  user.active = false;
+  user.deletedAt = new Date().toISOString();
+  
+  res.json({
+    success: true,
+    message: 'User deactivated successfully',
+    user: user
+  });
+});
+
+app.get('/api/admin/managers', (req, res) => {
+  const authUser = getAuthUser(req);
+  if (!authUser || !['DISTRICT_ADMIN', 'PRINCIPAL'].includes(authUser.role)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  
+  const managers = Object.values(staffDirectory).filter(u => 
+    ['DISTRICT_ADMIN', 'PRINCIPAL', 'MANAGER'].includes(u.role) && u.active
+  );
+  
+  res.json({
+    success: true,
+    managers: managers
+  });
+});
+
+app.get('/api/admin/managers', (req, res) => {
+  const authUser = getAuthUser(req);
+  if (!authUser || !['DISTRICT_ADMIN', 'PRINCIPAL'].includes(authUser.role)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  
+  // Get all users who can be managers (admins, principals, managers)
+  const managers = Object.values(staffDirectory).filter(user => 
+    ['DISTRICT_ADMIN', 'PRINCIPAL', 'MANAGER'].includes(user.role)
+  );
+  
+  res.json({
+    success: true,
+    data: { managers: managers }
+  });
+});
+
 // =================== TIMECARD MANAGEMENT ===================
 
 app.get('/api/admin/timecards', (req, res) => {
@@ -223,6 +281,23 @@ app.get('/api/admin/timecards', (req, res) => {
   });
 });
 
+app.get('/api/admin/timecards/:id', (req, res) => {
+  const authUser = getAuthUser(req);
+  if (!authUser || !['DISTRICT_ADMIN', 'PRINCIPAL'].includes(authUser.role)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  
+  const timecard = mockTimeCards.find(tc => tc.id === req.params.id);
+  if (!timecard) {
+    return res.status(404).json({ error: 'Timecard not found' });
+  }
+  
+  res.json({
+    success: true,
+    data: timecard
+  });
+});
+
 app.post('/api/admin/timecards/:id/approve', (req, res) => {
   const authUser = getAuthUser(req);
   if (!authUser || !['DISTRICT_ADMIN', 'PRINCIPAL'].includes(authUser.role)) {
@@ -242,7 +317,7 @@ app.post('/api/admin/timecards/:id/approve', (req, res) => {
   res.json({
     success: true,
     message: 'Timecard approved successfully',
-    timecard: timecard
+    data: timecard
   });
 });
 
@@ -265,7 +340,7 @@ app.post('/api/admin/timecards/:id/reject', (req, res) => {
   res.json({
     success: true,
     message: 'Timecard rejected',
-    timecard: timecard
+    data: timecard
   });
 });
 
@@ -281,13 +356,30 @@ app.get('/api/admin/timeoff', (req, res) => {
   
   // Filter by status if requested
   if (req.query.status) {
-    requests = requests.filter(req => req.status === req.query.status);
+    requests = requests.filter(r => r.status === req.query.status);
   }
   
   res.json({
     success: true,
     data: requests,
     total: requests.length
+  });
+});
+
+app.get('/api/admin/timeoff/:id', (req, res) => {
+  const authUser = getAuthUser(req);
+  if (!authUser || !['DISTRICT_ADMIN', 'PRINCIPAL'].includes(authUser.role)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  
+  const request = mockTimeOffRequests.find(r => r.id === req.params.id);
+  if (!request) {
+    return res.status(404).json({ error: 'Time off request not found' });
+  }
+  
+  res.json({
+    success: true,
+    data: request
   });
 });
 
@@ -310,7 +402,30 @@ app.post('/api/admin/timeoff/:id/approve', (req, res) => {
   res.json({
     success: true,
     message: 'Time off request approved',
-    request: request
+    data: request
+  });
+});
+
+app.post('/api/admin/timeoff/:id/reject', (req, res) => {
+  const authUser = getAuthUser(req);
+  if (!authUser || !['DISTRICT_ADMIN', 'PRINCIPAL'].includes(authUser.role)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  
+  const request = mockTimeOffRequests.find(r => r.id === req.params.id);
+  if (!request) {
+    return res.status(404).json({ error: 'Time off request not found' });
+  }
+  
+  request.status = 'REJECTED';
+  request.approvedBy = authUser.id;
+  request.approvedAt = new Date().toISOString();
+  request.comments = req.body.comments || 'Rejected by administrator';
+  
+  res.json({
+    success: true,
+    message: 'Time off request rejected',
+    data: request
   });
 });
 

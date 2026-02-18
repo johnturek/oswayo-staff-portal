@@ -91,11 +91,17 @@ export const adminApi = {
   resetPassword: (id) => api.post(`/admin/users/${id}/reset-password`),
   
   // Time Card Management
+  getTimecards: (params) => api.get('/admin/timecards', { params }),
+  getTimecard: (id) => api.get(`/admin/timecards/${id}`),
+  approveTimecard: (id, data) => api.post(`/admin/timecards/${id}/approve`, data),
+  rejectTimecard: (id, data) => api.post(`/admin/timecards/${id}/reject`, data),
   getUserTimeCards: (userId, params) => api.get(`/admin/users/${userId}/timecards`, { params }),
   deleteTimeCard: (id) => api.delete(`/admin/timecards/${id}`),
   
   // Time Off Management
-  getAllTimeOffRequests: (params) => api.get('/admin/timeoff-requests', { params }),
+  getAllTimeOffRequests: (params) => api.get('/admin/timeoff', { params }),
+  approveTimeOffRequest: (id, data) => api.post(`/admin/timeoff/${id}/approve`, data),
+  rejectTimeOffRequest: (id, data) => api.post(`/admin/timeoff/${id}/reject`, data),
   overrideTimeOffApproval: (id, action, comments) => api.post(`/admin/timeoff-requests/${id}/override-approval`, { action, comments }),
   
   // System Stats

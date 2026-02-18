@@ -34,6 +34,8 @@ import CalendarManageView from '../views/calendar/CalendarManageView.vue'
 // Admin views
 import AdminUsersView from '../views/admin/AdminUsersView.vue'
 import AdminUserDetailView from '../views/admin/AdminUserDetailView.vue'
+import AdminTimecardsView from '../views/admin/AdminTimecardsView.vue'
+import AdminTimeOffView from '../views/admin/AdminTimeOffView.vue'
 import AdminNotificationsView from '../views/admin/AdminNotificationsView.vue'
 import AdminSettingsView from '../views/admin/AdminSettingsView.vue'
 
@@ -193,6 +195,18 @@ const routes = [
             meta: { title: 'User Details' }
           },
           {
+            path: 'timecards',
+            name: 'admin-timecards',
+            component: AdminTimecardsView,
+            meta: { title: 'Manage Timecards' }
+          },
+          {
+            path: 'timeoff',
+            name: 'admin-timeoff',
+            component: AdminTimeOffView,
+            meta: { title: 'Manage Time Off' }
+          },
+          {
             path: 'notifications',
             name: 'admin-notifications',
             component: AdminNotificationsView,
@@ -266,14 +280,13 @@ router.beforeEach(async (to, from, next) => {
   }
   
   // Handle role-based access
-  if (to.meta.requiresAdmin && authStore.user?.role !== 'ADMIN') {
+  if (to.meta.requiresAdmin && !['DISTRICT_ADMIN', 'PRINCIPAL'].includes(authStore.user?.role)) {
     next({ name: 'dashboard' })
     return
   }
   
   if (to.meta.requiresManager && 
-      authStore.user?.role !== 'ADMIN' && 
-      authStore.user?.role !== 'MANAGER' &&
+      !['DISTRICT_ADMIN', 'PRINCIPAL', 'MANAGER'].includes(authStore.user?.role) &&
       !authStore.user?.hasDirectReports) {
     next({ name: 'dashboard' })
     return
